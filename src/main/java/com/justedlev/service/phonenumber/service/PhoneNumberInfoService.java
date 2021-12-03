@@ -24,27 +24,39 @@ public class PhoneNumberInfoService implements IPhoneNumberInfo {
 
     @Override
     public PhoneNumberDTO getInfoByPhoneNumber(String phoneNumber) {
-        log.debug("Received data : {}", phoneNumber);
+        log.debug("Received phone number : {}", phoneNumber);
         PhoneNumber pn;
         PhoneNumberOfflineGeocoder pnog = PhoneNumberOfflineGeocoder.getInstance();
         try {
-            pn = phoneNumberUtil.parse(phoneNumber, "IN");
+            log.debug("Parsing phone number : {}", phoneNumber);
+            pn = phoneNumberUtil.parse(phoneNumber, null);
         } catch (NumberParseException e) {
-            return null;
+            log.debug("Failed to parse phone number : {}", e.getMessage());
+            return PhoneNumberDTO.builder()
+                    .input_phone_number(phoneNumber)
+                    .is_number_valid(false)
+                    .build();
         }
         if (!phoneNumberUtil.isValidNumber(pn)) {
-            return null;
+            log.debug("Phone number is not valid");
+            return PhoneNumberDTO.builder()
+                    .input_phone_number(phoneNumber)
+                    .is_number_valid(false)
+                    .build();
         }
         List<String> timeZones = PhoneNumberToTimeZonesMapper.getInstance().getTimeZonesForNumber(pn);
-        return PhoneNumberDTO.builder()
-                .phone_number(phoneNumber)
+        PhoneNumberDTO phoneNumberDTO = PhoneNumberDTO.builder()
+                .input_phone_number(phoneNumber)
                 .country_code(pn.getCountryCode())
                 .national_number(pn.getNationalNumber())
                 .region(phoneNumberUtil.getRegionCodeForNumber(pn))
                 .number_type(phoneNumberUtil.getNumberType(pn).toString())
                 .location(pnog.getDescriptionForNumber(pn, Locale.ENGLISH))
                 .time_zones(timeZones)
+                .is_number_valid(true)
                 .build();
+        log.debug("Received info about the phone number : {}", phoneNumberDTO);
+        return phoneNumberDTO;
     }
 
 }
